@@ -363,21 +363,23 @@ html, body, [data-testid="stAppViewContainer"], .stApp {
 
 /* Assistant message — glowing container */
 .assistant-bubble {
-  background: rgba(91,110,245,0.04);
-  border: 1px solid rgba(91,110,245,0.15);
+  background: rgba(20,22,38,0.85);
+  border: 1px solid rgba(91,110,245,0.25);
   border-radius: 4px 16px 16px 16px;
-  padding: 14px 18px;
+  padding: 16px 20px;
   font-family: var(--font-mono);
-  font-size: 13.5px;
-  line-height: 1.7;
-  color: var(--text);
-  box-shadow: 0 0 20px rgba(91,110,245,0.08);
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.8;
+  color: #FFFFFF;
+  letter-spacing: 0.2px;
+  box-shadow: 0 0 20px rgba(91,110,245,0.10);
   transition: box-shadow 0.3s ease;
   white-space: pre-wrap;
   word-break: break-word;
 }
 .assistant-bubble:hover {
-  box-shadow: 0 0 35px rgba(91,110,245,0.18), 0 0 15px rgba(138,79,212,0.1);
+  box-shadow: 0 0 30px rgba(91,110,245,0.15), 0 0 12px rgba(138,79,212,0.08);
 }
 
 /* ── LEARNING MODE CARDS ── */
