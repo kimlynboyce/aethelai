@@ -403,9 +403,15 @@ html, body, [data-testid="stAppViewContainer"], .stApp {
   padding: 4px 0 !important;
 }
 
+/* Force readable text on all message content */
+[data-testid="stChatMessage"] [data-testid="stMarkdownContainer"],
+[data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] p {
+  color: var(--text) !important;
+}
+
 /* User message bubble */
-[data-testid="stChatMessage"][data-testid*="user"] .stMarkdown,
-.stChatMessage:has([aria-label="user"]) .stMarkdown {
+[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) [data-testid="stMarkdownContainer"],
+[data-testid="stChatMessage"][data-testid*="user"] .stMarkdown {
   background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: 16px 16px 4px 16px;
@@ -459,19 +465,36 @@ html, body, [data-testid="stAppViewContainer"], .stApp {
 }
 
 /* ── INPUT ── */
+[data-testid="stBottom"],
+[data-testid="stBottom"] > div,
+[data-testid="stBottomBlockContainer"] {
+  background: var(--bg) !important;
+}
 [data-testid="stChatInput"] {
   background: var(--surface) !important;
   border: 1px solid var(--border) !important;
-  border-radius: 14px !important;
+  border-radius: 12px !important;
+  max-width: 700px !important;
+  margin: 0 auto !important;
+}
+[data-testid="stChatInput"] > div {
+  background: var(--surface) !important;
 }
 [data-testid="stChatInput"]:focus-within {
   border-color: rgba(79,209,197,0.45) !important;
   box-shadow: 0 0 20px rgba(79,209,197,0.12) !important;
 }
 [data-testid="stChatInput"] textarea {
-  background: transparent !important;
+  background: var(--surface) !important;
   color: var(--text) !important;
+  caret-color: var(--accent) !important;
   font-family: var(--font) !important;
+  font-size: 14px !important;
+  min-height: 44px !important;
+  max-height: 120px !important;
+}
+[data-testid="stChatInput"] textarea::placeholder {
+  color: var(--text-dim) !important;
 }
 
 /* ── EXPANDERS ── */
