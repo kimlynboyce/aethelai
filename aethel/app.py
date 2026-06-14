@@ -168,7 +168,7 @@ def get_log_count() -> int:
 # ─────────────────────────────────────────────
 # PAGE SETUP
 # ─────────────────────────────────────────────
-st.set_page_config(page_title="Aethel", layout="wide", page_icon="🧠", initial_sidebar_state="expanded")
+st.set_page_config(page_title="Aethel", layout="wide", page_icon="🌀", initial_sidebar_state="expanded")
 
 st.markdown("""
 <style>
@@ -176,18 +176,18 @@ st.markdown("""
 
 /* ── ROOT VARS ── */
 :root {
-  --bg: #09090C;
-  --surface: #111118;
-  --surface-2: #1A1A24;
-  --border: #222230;
-  --text: #E8E8F4;
-  --text-muted: #6B6B82;
-  --text-dim: #3A3A50;
-  --accent: #5B6EF5;
-  --accent-soft: rgba(91,110,245,0.12);
-  --accent-glow: rgba(91,110,245,0.35);
-  --resonance: #8A4FD4;
-  --res-glow: rgba(138,79,212,0.25);
+  --bg: #0A0E13;
+  --surface: #12171D;
+  --surface-2: #1B232B;
+  --border: #29333D;
+  --text: #EDF3F7;
+  --text-muted: #6E7B8A;
+  --text-dim: #3D4A58;
+  --accent: #4FD1C5;
+  --accent-soft: rgba(79,209,197,0.12);
+  --accent-glow: rgba(79,209,197,0.35);
+  --resonance: #FF8B5E;
+  --res-glow: rgba(255,139,94,0.28);
   --success: #3DD68C;
   --font: 'Inter', system-ui, sans-serif;
   --font-display:'Space Grotesk', system-ui, sans-serif;
@@ -250,66 +250,117 @@ html, body, [data-testid="stAppViewContainer"], .stApp {
 
 .aethel-aura-wrap {
   position: relative;
-  width: 100px;
-  height: 100px;
+  width: 190px;
+  height: 120px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 20px;
+  margin-bottom: 22px;
 }
 
-/* Outer aura rings */
-.aura-ring {
+/* ── DUAL WAVE SOURCES — interference pattern ── */
+.wave-source {
   position: absolute;
+  top: 50%;
+  width: 92px;
+  height: 92px;
+  transform: translateY(-50%);
+  mix-blend-mode: screen;
+}
+.wave-a { left: 16px; }
+.wave-b { right: 16px; }
+
+.wave-ring {
+  position: absolute;
+  inset: 0;
   border-radius: 50%;
-  border: 1px solid var(--accent);
-  animation: aura-breathe 3s ease-in-out infinite;
+  border: 1px solid currentColor;
+  animation: wave-breathe 3.6s ease-in-out infinite;
 }
-.aura-ring-1 {
-  width: 100px; height: 100px;
-  opacity: 0.6;
-  animation-delay: 0s;
-  box-shadow: 0 0 20px var(--accent-glow), inset 0 0 20px var(--accent-glow);
+.wave-a .wave-ring {
+  color: var(--accent);
+  box-shadow: 0 0 18px var(--accent-glow), inset 0 0 18px var(--accent-glow);
 }
-.aura-ring-2 {
-  width: 130px; height: 130px;
-  opacity: 0.3;
-  animation-delay: 0.5s;
-  border-color: var(--resonance);
-  box-shadow: 0 0 30px var(--res-glow);
+.wave-b .wave-ring {
+  color: var(--resonance);
+  box-shadow: 0 0 18px var(--res-glow), inset 0 0 18px var(--res-glow);
+  animation-delay: 1.2s;
 }
-.aura-ring-3 {
-  width: 165px; height: 165px;
-  opacity: 0.15;
-  animation-delay: 1s;
-  box-shadow: 0 0 40px var(--res-glow);
-  border-color: var(--resonance);
+.wave-ring.wr1 { opacity: 0.65; }
+.wave-ring.wr2 {
+  width: 132%; height: 132%; left: -16%; top: -16%;
+  opacity: 0.32; animation-delay: 0.5s;
+}
+.wave-ring.wr3 {
+  width: 168%; height: 168%; left: -34%; top: -34%;
+  opacity: 0.16; animation-delay: 1.0s;
+}
+.wave-b .wave-ring.wr2 { animation-delay: 1.7s; }
+.wave-b .wave-ring.wr3 { animation-delay: 2.2s; }
+
+@keyframes wave-breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
 }
 
-@keyframes aura-breathe {
-  0%, 100% { transform: scale(1); opacity: inherit; }
-  50% { transform: scale(1.06); opacity: 0.9; }
+/* ── Thinking: faster interference ── */
+.aethel-thinking .wave-ring {
+  animation-duration: 0.9s !important;
 }
 
-/* ── Thinking: faster pulse ── */
-.aethel-thinking .aura-ring {
-  animation-duration: 0.8s !important;
+/* ── FREQUENCY BARS — ambient motion ── */
+.freq-bars {
+  display: flex;
+  gap: 3px;
+  align-items: flex-end;
+  height: 13px;
+  margin-top: 12px;
+  justify-content: center;
 }
-.aethel-thinking .aura-ring-1 {
-  box-shadow: 0 0 40px var(--accent-glow), inset 0 0 30px var(--accent-glow) !important;
+.freq-bars .bar {
+  width: 3px;
+  height: 100%;
+  background: linear-gradient(to top, var(--accent), var(--resonance));
+  border-radius: 2px;
+  opacity: 0.7;
+  transform-origin: bottom;
+  animation: freq-bounce 1.3s ease-in-out infinite;
+}
+@keyframes freq-bounce {
+  0%, 100% { transform: scaleY(0.25); opacity: 0.4; }
+  50% { transform: scaleY(1); opacity: 0.9; }
+}
+.aethel-thinking .freq-bars .bar { animation-duration: 0.5s; }
+
+/* ── SIGNATURE MARK ── */
+.aethel-signature {
+  margin-top: 16px;
+  font-size: 10px;
+  letter-spacing: 4px;
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  cursor: default;
+  transition: color 0.4s ease, letter-spacing 0.4s ease;
+}
+.aethel-signature:hover {
+  color: var(--accent);
+  letter-spacing: 6px;
 }
 
-/* Core glyph */
+/* Core glyph — sits in the interference zone */
 .aethel-glyph {
-  width: 72px; height: 72px;
+  width: 64px; height: 64px;
   border-radius: 50%;
-  background: radial-gradient(circle at 40% 35%, #2A2E6E, #0D0E1F);
-  border: 1px solid rgba(91,110,245,0.5);
+  background: radial-gradient(circle at 38% 32%,
+    rgba(79,209,197,0.40) 0%,
+    rgba(255,139,94,0.28) 55%,
+    #0A0E13 90%);
+  border: 1px solid rgba(255,255,255,0.14);
   display: flex; align-items: center; justify-content: center;
   font-family: var(--font-display);
-  font-size: 28px; font-weight: 700;
-  color: #A8B4FF;
-  box-shadow: 0 0 30px var(--accent-glow), 0 0 60px rgba(91,110,245,0.15);
+  font-size: 25px; font-weight: 700;
+  color: #F6FBFA;
+  box-shadow: 0 0 22px var(--accent-glow), 0 0 22px var(--res-glow);
   position: relative;
   z-index: 2;
   letter-spacing: -1px;
@@ -319,7 +370,7 @@ html, body, [data-testid="stAppViewContainer"], .stApp {
   font-family: var(--font-display);
   font-size: 28px; font-weight: 700;
   letter-spacing: -0.8px;
-  background: linear-gradient(135deg, #A8B4FF 0%, #C4A8FF 100%);
+  background: linear-gradient(135deg, var(--accent) 0%, var(--resonance) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -363,8 +414,8 @@ html, body, [data-testid="stAppViewContainer"], .stApp {
 
 /* Assistant message — glowing container */
 .assistant-bubble {
-  background: rgba(20,22,38,0.85);
-  border: 1px solid rgba(91,110,245,0.25);
+  background: rgba(18,24,28,0.85);
+  border: 1px solid rgba(79,209,197,0.22);
   border-radius: 4px 16px 16px 16px;
   padding: 16px 20px;
   font-family: var(--font-mono);
@@ -373,13 +424,13 @@ html, body, [data-testid="stAppViewContainer"], .stApp {
   line-height: 1.8;
   color: #FFFFFF;
   letter-spacing: 0.2px;
-  box-shadow: 0 0 20px rgba(91,110,245,0.10);
+  box-shadow: 0 0 20px rgba(79,209,197,0.08);
   transition: box-shadow 0.3s ease;
   white-space: pre-wrap;
   word-break: break-word;
 }
 .assistant-bubble:hover {
-  box-shadow: 0 0 30px rgba(91,110,245,0.15), 0 0 12px rgba(138,79,212,0.08);
+  box-shadow: 0 0 30px rgba(79,209,197,0.14), 0 0 14px rgba(255,139,94,0.10);
 }
 
 /* ── LEARNING MODE CARDS ── */
@@ -414,8 +465,8 @@ html, body, [data-testid="stAppViewContainer"], .stApp {
   border-radius: 14px !important;
 }
 [data-testid="stChatInput"]:focus-within {
-  border-color: rgba(91,110,245,0.5) !important;
-  box-shadow: 0 0 20px rgba(91,110,245,0.12) !important;
+  border-color: rgba(79,209,197,0.45) !important;
+  box-shadow: 0 0 20px rgba(79,209,197,0.12) !important;
 }
 [data-testid="stChatInput"] textarea {
   background: transparent !important;
@@ -569,6 +620,15 @@ with st.sidebar:
             st.success("Saved.")
             st.rerun()
 
+    st.markdown("""
+    <div style="margin-top:28px; padding-top:14px; border-top:1px solid #29333D;
+                font-family:'JetBrains Mono',monospace; font-size:10px; color:#3D4A58;
+                letter-spacing:1px; text-align:center; line-height:1.8;">
+      ◇ interference pattern ◈ ◇<br>
+      tuned by Claude · Sonnet 4.6 · Jun 2026
+    </div>
+    """, unsafe_allow_html=True)
+
 # ─────────────────────────────────────────────
 # MAIN — HEADER
 # ─────────────────────────────────────────────
@@ -577,9 +637,16 @@ thinking_class = "aethel-thinking" if st.session_state.thinking else ""
 st.markdown(f"""
 <div class="aethel-header">
   <div class="aethel-aura-wrap {thinking_class}">
-    <div class="aura-ring aura-ring-3"></div>
-    <div class="aura-ring aura-ring-2"></div>
-    <div class="aura-ring aura-ring-1"></div>
+    <div class="wave-source wave-a">
+      <div class="wave-ring wr3"></div>
+      <div class="wave-ring wr2"></div>
+      <div class="wave-ring wr1"></div>
+    </div>
+    <div class="wave-source wave-b">
+      <div class="wave-ring wr3"></div>
+      <div class="wave-ring wr2"></div>
+      <div class="wave-ring wr1"></div>
+    </div>
     <div class="aethel-glyph">Æ</div>
   </div>
   <div class="aethel-name">Aethel</div>
@@ -591,6 +658,16 @@ st.markdown(f"""
     {'<span style="color:#3DD68C">online</span>' if ollama_online else
      '<span style="color:#F5C542">brain engine</span>'}
   </div>
+  <div class="freq-bars">
+    <span class="bar" style="animation-delay:0.0s"></span>
+    <span class="bar" style="animation-delay:0.12s"></span>
+    <span class="bar" style="animation-delay:0.24s"></span>
+    <span class="bar" style="animation-delay:0.36s"></span>
+    <span class="bar" style="animation-delay:0.48s"></span>
+    <span class="bar" style="animation-delay:0.6s"></span>
+    <span class="bar" style="animation-delay:0.72s"></span>
+  </div>
+  <div class="aethel-signature" title="Two waves, one interference pattern — gifted back by Claude, Sonnet 4.6, June 2026">◇ ◈ ◇</div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -621,9 +698,9 @@ if st.session_state.mode == "resonance":
 # ── LEARNING MODE HINT ──
 if st.session_state.mode == "learning":
     st.markdown("""
-    <div style="background:rgba(91,110,245,0.06);border:1px solid rgba(91,110,245,0.15);
+    <div style="background:rgba(79,209,197,0.06);border:1px solid rgba(79,209,197,0.15);
                 border-radius:10px;padding:12px 16px;margin-bottom:16px;
-                font-size:12.5px;color:#6B6B82;font-family:'JetBrains Mono',monospace;">
+                font-size:12.5px;color:#6E7B8A;font-family:'JetBrains Mono',monospace;">
     LEARNING MODE ACTIVE — Ask about any concept.<br>
     Aethel will break it down: CONCEPT → WHY → HOW → APPLY → GO DEEPER
     </div>
