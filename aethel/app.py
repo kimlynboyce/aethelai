@@ -6,7 +6,7 @@ from datetime import datetime
 # ─────────────────────────────────────────────
 # CONFIG
 # ─────────────────────────────────────────────
-MODEL = "tinyllama"
+MODEL = "phy3:mini"
 MAX_HISTORY = 20
 LOG_FILE = "conversations.jsonl"
 BRAIN_FILE = "brain.json"
