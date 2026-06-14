@@ -6,7 +6,7 @@ from datetime import datetime
 # ─────────────────────────────────────────────
 # CONFIG
 # ─────────────────────────────────────────────
-MODEL = "phy3:mini"
+MODEL = "phi3:mini"
 MAX_HISTORY = 20
 LOG_FILE = "conversations.jsonl"
 BRAIN_FILE = "brain.json"
@@ -546,7 +546,7 @@ with st.sidebar:
             st.caption("No data yet.")
 
     with st.expander("✏️ Edit brain.json"):
-        edited = st.text_area("", value=get_brain_raw(), height=220)
+        edited = st.text_area("brain.json", value=get_brain_raw(), height=220, label_visibility="collapsed")
         if st.button("💾 Save"):
             try:
                 json.loads(edited)
@@ -559,7 +559,7 @@ with st.sidebar:
                 st.error(f"Bad JSON: {e}")
 
     with st.expander("✏️ Edit context.txt"):
-        new_ctx = st.text_area("", value=get_context(), height=120)
+        new_ctx = st.text_area("context.txt", value=get_context(), height=120, label_visibility="collapsed")
         if st.button("💾 Save Context"):
             with open(CONTEXT_FILE, "w") as f:
                 f.write(new_ctx)
