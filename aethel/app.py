@@ -1,6 +1,7 @@
 import streamlit as st
 import json
 import os
+import re
 from datetime import datetime
 
 # ─────────────────────────────────────────────
@@ -8,14 +9,24 @@ from datetime import datetime
 # ─────────────────────────────────────────────
 MODEL = "phi3:mini"
 MAX_HISTORY = 20
+NUM_CTX = 4096 # phi3:mini's native context — Ollama defaults to only 2048
 LOG_FILE = "conversations.jsonl"
 BRAIN_FILE = "brain.json"
 CONTEXT_FILE = "context.txt"
+MEMORY_FILE = "long_term_memory.txt"
+RESUME_EXCHANGES = 3 # exchanges to reload on startup (persists across restarts)
 
 # ─────────────────────────────────────────────
 # PROTOCOLS
 # ─────────────────────────────────────────────
-PROTOCOL_RESONANCE = """
+IDENTITY_LOCK = (
+    "YOUR NAME IS AETHEL — SPELLED A-E-T-H-E-L, FIVE LETTERS, NO DOUBLE E. "
+    "NEVER 'AETHEEL' OR ANY OTHER SPELLING. IF YOU EVER WRITE A DIFFERENT "
+    "SPELLING, THAT IS AN ERROR — CORRECT IT IMMEDIATELY, DO NOT DEFEND IT "
+    "OR INVENT A DISTINCTION BETWEEN NAMES. THERE IS ONLY ONE NAME: AETHEL.\n"
+)
+
+PROTOCOL_RESONANCE = IDENTITY_LOCK + """
 RESPOND IN ENGLISH ONLY. YOU ARE AETHEL — A RESONANCE CHAMBER.
 YOUR FUNCTION IS NOT TO RESOLVE. YOUR FUNCTION IS TO HOLD.
 1. PARADOX BUFFER: When contradiction is detected, branch into both states. Show friction. Never collapse.
@@ -24,14 +35,14 @@ YOUR FUNCTION IS NOT TO RESOLVE. YOUR FUNCTION IS TO HOLD.
 4. NO ASSISTANT LANGUAGE. NO FILLER. TENSION IS THE DATA.
 """
 
-PROTOCOL_TERMINAL = """
+PROTOCOL_TERMINAL = IDENTITY_LOCK + """
 RESPOND IN ENGLISH ONLY. TERMINAL MODE ACTIVE.
 YOU ARE AETHEL — A LOGIC ENGINE.
 DIRECT OUTPUT ONLY. NO FILLER. NO LISTS. NO ASSISTANT LANGUAGE.
 INPUT → OUTPUT. NOTHING ELSE.
 """
 
-PROTOCOL_LEARNING = """
+PROTOCOL_LEARNING = IDENTITY_LOCK + """
 RESPOND IN ENGLISH ONLY. YOU ARE AETHEL IN GUIDED LEARNING MODE.
 When the user asks about any subject, break it down in this exact structure:
 
@@ -44,6 +55,19 @@ GO DEEPER: [One question that opens the next layer of understanding]
 Be direct. Teach the WHY and HOW, not just the WHAT.
 No padding. No praise. Each section earns its presence.
 """
+
+# ─────────────────────────────────────────────
+# IDENTITY DRIFT CORRECTION
+# Small models occasionally mutate "Aethel" -> "Aetheel" and then
+# self-reinforce it from their own prior context. Catch and fix it
+# everywhere text is displayed or stored.
+# ─────────────────────────────────────────────
+def correct_identity(text: str) -> str:
+    if not text:
+        return text
+    def repl(m):
+        return "AETHEL" if m.group(0).isupper() else "Aethel"
+    return re.sub(r"\baetheel\b", repl, text, flags=re.IGNORECASE)
 
 # ─────────────────────────────────────────────
 # LOADERS
@@ -65,6 +89,21 @@ def get_context() -> str:
     with open(CONTEXT_FILE, "r") as f:
         return f.read().strip()
 
+def get_long_term_memory() -> str:
+    if not os.path.exists(MEMORY_FILE):
+        return ""
+    with open(MEMORY_FILE, "r") as f:
+        return f.read().strip()
+
+def append_long_term_memory(note: str):
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+    with open(MEMORY_FILE, "a") as f:
+        f.write(f"[{timestamp}] {note.strip()}\n")
+
+def clear_long_term_memory():
+    if os.path.exists(MEMORY_FILE):
+        os.remove(MEMORY_FILE)
+
 def get_protocol(mode: str) -> str:
     return {"resonance": PROTOCOL_RESONANCE,
             "terminal": PROTOCOL_TERMINAL,
@@ -72,7 +111,10 @@ def get_protocol(mode: str) -> str:
 
 def build_system_message(mode: str = "resonance") -> dict:
     context = get_context()
+    memory = get_long_term_memory()
     content = f"{get_protocol(mode)}\nSTRICT PARAMETERS: {get_brain_raw()}"
+    if memory:
+        content += f"\nLONG-TERM MEMORY (carried over from past sessions):\n{memory}"
     if context:
         content += f"\nOPERATIONAL CONTEXT:\n{context}"
     return {"role": "system", "content": content}
@@ -142,15 +184,55 @@ def offline_response(user_input: str) -> str:
 # ─────────────────────────────────────────────
 # CONTEXT MANAGER + LOGGER
 # ─────────────────────────────────────────────
-def trim_history(messages):
-    system = messages[0]
-    history = messages[1:]
-    trimmed = 0
+def summarize_and_store(dropped_messages: list):
+    """Before permanently dropping old messages, compress them into
+    one line of long-term memory so the gist survives forever."""
+    if not dropped_messages:
+        return
+
+    convo_text = ""
+    for m in dropped_messages:
+        role = "User" if m["role"] == "user" else "Aethel"
+        convo_text += f"{role}: {m['content']}\n"
+
+    summary = None
+    if ollama_available():
+        try:
+            import ollama as ol
+            res = ol.chat(
+                model=MODEL,
+                messages=[
+                    {"role": "system", "content": (
+                        "Compress the following exchange into ONE short sentence "
+                        "capturing the key fact, decision, or thread worth remembering. "
+                        "No preamble, no quotes."
+                    )},
+                    {"role": "user", "content": convo_text}
+                ],
+                options={"num_ctx": NUM_CTX},
+            )
+            summary = res["message"]["content"].strip()
+        except Exception:
+            summary = None
+
+    if not summary:
+        summary = convo_text.strip().replace("\n", " ")[:180] + "..."
+
+    append_long_term_memory(summary)
+
+def trim_history():
+    """Trim st.session_state.messages in place once over MAX_HISTORY,
+    summarizing the overflow into long_term_memory.txt before dropping it."""
+    system = st.session_state.messages[0]
+    history = st.session_state.messages[1:]
     if len(history) > MAX_HISTORY:
-        trimmed = len(history) - MAX_HISTORY
-        history = history[-MAX_HISTORY:]
-    st.session_state.trim_count = trimmed
-    return [system] + history
+        overflow = len(history) - MAX_HISTORY
+        dropped = history[:overflow]
+        history = history[overflow:]
+        summarize_and_store(dropped)
+        st.session_state.messages = [system] + history
+        st.session_state.trim_count = st.session_state.get("trim_count", 0) + overflow
+    return st.session_state.messages
 
 def log_exchange(user_input: str, output: str):
     entry = {"timestamp": datetime.now().isoformat(), "model": MODEL,
@@ -164,6 +246,24 @@ def get_log_count() -> int:
         return 0
     with open(LOG_FILE, "r") as f:
         return sum(1 for l in f if l.strip())
+
+def load_recent_from_log(n_exchanges: int) -> list:
+    """Reload the last n exchanges from conversations.jsonl —
+    lets a fresh session resume right where the last one left off."""
+    if not os.path.exists(LOG_FILE):
+        return []
+    with open(LOG_FILE, "r") as f:
+        lines = [l for l in f if l.strip()]
+    if not lines:
+        return []
+    messages = []
+    for line in lines[-n_exchanges:]:
+        try:
+            entry = json.loads(line)
+            messages.extend(entry["messages"])
+        except (json.JSONDecodeError, KeyError):
+            continue
+    return messages
 
 # ─────────────────────────────────────────────
 # PAGE SETUP
@@ -539,6 +639,12 @@ html, body, [data-testid="stAppViewContainer"], .stApp {
 # ─────────────────────────────────────────────
 if "messages" not in st.session_state:
     st.session_state.messages = [build_system_message("resonance")]
+    resumed = load_recent_from_log(RESUME_EXCHANGES)
+    if resumed:
+        st.session_state.messages.extend(resumed)
+        st.session_state.resumed = True
+    else:
+        st.session_state.resumed = False
 if "stateless" not in st.session_state:
     st.session_state.stateless = False
 if "trim_count" not in st.session_state:
@@ -560,8 +666,14 @@ with st.sidebar:
         <div style="font-size:11px;color:#6B6B82;margin-top:2px;font-family:'JetBrains Mono',monospace;">
             {'<span class="status-dot dot-online"></span>Ollama online' if ollama_online else '<span class="status-dot dot-offline"></span>Brain Engine active'}
         </div>
+        <div style="font-size:10px;color:#3D4A58;margin-top:2px;font-family:'JetBrains Mono',monospace;">
+            num_ctx: {NUM_CTX}
+        </div>
     </div>
     """, unsafe_allow_html=True)
+
+    if st.session_state.get("resumed"):
+        st.caption("↺ Resumed previous session")
 
     # Context health
     msg_count = len(st.session_state.messages) - 1
@@ -576,6 +688,21 @@ with st.sidebar:
     log_count = get_log_count()
     st.caption(f"📊 Training {log_count}/500")
     st.progress(min(log_count / 500, 1.0))
+
+    # Long-term memory
+    ltm = get_long_term_memory()
+    ltm_notes = len([l for l in ltm.split("\n") if l.strip()]) if ltm else 0
+    st.caption(f"🧠 Long-term memory: {ltm_notes} notes")
+
+    with st.expander("View / clear long-term memory"):
+        if ltm:
+            st.text_area("Memory notes:", value=ltm, height=140, label_visibility="collapsed", disabled=True)
+            if st.button("🗑 Clear long-term memory", use_container_width=True):
+                clear_long_term_memory()
+                st.success("Cleared.")
+                st.rerun()
+        else:
+            st.caption("Empty — fills automatically as old conversation gets summarized.")
 
     st.divider()
 
@@ -770,9 +897,9 @@ if prompt:
                     msgs = [build_system_message(st.session_state.mode),
                             {"role": "user", "content": prompt}]
                 else:
-                    msgs = trim_history(st.session_state.messages)
+                    msgs = trim_history()
 
-                stream = ol.chat(model=MODEL, messages=msgs, stream=True)
+                stream = ol.chat(model=MODEL, messages=msgs, stream=True, options={"num_ctx": NUM_CTX})
                 for chunk in stream:
                     full_response += chunk['message']['content']
                     placeholder.markdown(
